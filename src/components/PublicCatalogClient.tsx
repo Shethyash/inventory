@@ -206,7 +206,7 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
                                     onClick={() => isAvailable && setSelectedItem(item)}
                                     className={`group relative rounded-2xl border border-white/10 glass overflow-hidden transition-all duration-300 flex flex-col h-full ${isAvailable ? 'cursor-pointer hover:bg-white/5 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20' : 'opacity-60 grayscale-[0.8] cursor-not-allowed'}`}
                                 >
-                                    <div className="aspect-[4/3] w-full bg-black/5 dark:bg-black/50 relative overflow-hidden flex items-center justify-center p-6">
+                                    <div className="aspect-4/3 w-full bg-black/5 dark:bg-black/50 relative overflow-hidden flex items-center justify-center p-6">
                                         {mainImage ? (
                                             <img
                                                 src={mainImage}
@@ -229,7 +229,7 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
                                         </div>
                                     </div>
 
-                                    <div className="p-5 flex flex-col flex-grow">
+                                    <div className="p-5 flex flex-col grow">
                                         <div className="mb-2">
                                             <span className="text-xs font-semibold uppercase tracking-wider text-primary mb-1 block">
                                                 {item.category?.name || 'Uncategorized'}
@@ -265,7 +265,7 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
                                 {selectedItem.images && selectedItem.images.length > 0 ? (
                                     <div className="flex gap-4 overflow-x-auto w-full h-full items-center snap-x">
                                         {selectedItem.images.map((img: any, idx: number) => (
-                                            <img key={idx} src={img.url} alt={`${selectedItem.name} - ${idx}`} className="h-full object-contain snap-center flex-shrink-0" />
+                                            <img key={idx} src={img.url} alt={`${selectedItem.name} - ${idx}`} className="h-full object-contain snap-center shrink-0" />
                                         ))}
                                     </div>
                                 ) : (
