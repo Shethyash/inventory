@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Item {
+  id           String    @id @default(cuid())
+  name         String
+  brandId      String?
+  brand        Brand?    @relation(fields: [brandId], references: [id])
+  status       String    @default("working") // 'damage', 'working', 'on rent', 'sold out'
+  purchaseDate DateTime
+  soldDate     DateTime?
+  realPrice    Float
+  paidPrice    Float
+  soldPrice    Float?
+  rentAmount   Float     @default(0) // Default daily rent amount for this specific item
+
+  serialNo    String?
+  description String?
+  images      ItemImage[]
+
+  rentals Rental[]
+  orders  Order[]
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+}
+
+model Rental {
+  id        String   @id @default(cuid())
+  receiptNo String?  @unique // Automatically generated unique timestamp ID
+
+  items Item[] // A rental can have multiple items
+
+  tenantName   String
+  tenantMobile String   @default("") // Tenant's mobile number
+  startDate    DateTime
+  endDate      DateTime
+
+  rentAmount Float // Total rent amount per day for all items
+  days       Int
+
+  address     String?
+  idProof     String?
+  vehicleNo   String?
+  images      String?
+  description String?
+  paymentType String? // 'online' or 'cash'
+
+  status      String  @default("active") // 'active' or 'completed'
+  notes       String? // Notes for completion, e.g., missing items
+
+  totalPayment Float
+  discount     Float @default(0)
+  amountPaid   Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ItemImage {
+  id        String   @id @default(cuid())
+  url       String
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id String @id @default(cuid())
+
+  items Item[] // An order can have multiple items
+
+  customerName String
+  startDate    DateTime
+  endDate      DateTime
+
+  targetRentAmount Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  items     Item[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  items     Item[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
