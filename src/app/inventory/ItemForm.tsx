@@ -27,11 +27,19 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [imageUrls, setImageUrls] = useState<string[]>(item?.images ? item.images.map((i: any) => i.url) : [])
+    const [mainImageIndex, setMainImageIndex] = useState(0)
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const handleFileUpload = async (files: FileList | null) => {
         if (!files || files.length === 0) return
+        
+
+        if (imageUrls.length + files.length > 6) {
+            toast.error('You can only upload a maximum of 6 photos.')
+            return
+        }
+
         setUploading(true)
         try {
             const formData = new FormData()
@@ -56,6 +64,11 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
 
     const removeImage = (indexToRemove: number) => {
         setImageUrls(prev => prev.filter((_, i) => i !== indexToRemove))
+        if (mainImageIndex === indexToRemove) {
+            setMainImageIndex(0)
+        } else if (mainImageIndex > indexToRemove) {
+            setMainImageIndex(prev => prev - 1)
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -63,6 +76,13 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
         setLoading(true)
 
         const formData = new FormData(e.currentTarget)
+
+        const orderedImages = [...imageUrls]
+        if (orderedImages.length > 0 && mainImageIndex > 0 && mainImageIndex < orderedImages.length) {
+            const temp = orderedImages[0];
+            orderedImages[0] = orderedImages[mainImageIndex];
+            orderedImages[mainImageIndex] = temp;
+        }
 
         const data = {
             name: formData.get('name') as string,
@@ -77,7 +97,7 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
             rentAmount: parseFloat(formData.get('rentAmount') as string) || 0,
             serialNo: formData.get('serialNo') as string || undefined,
             description: formData.get('description') as string || undefined,
-            images: imageUrls.length > 0 ? imageUrls : undefined,
+            images: orderedImages.length > 0 ? orderedImages : undefined,
         }
 
         try {
@@ -121,7 +141,7 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
                         <div className="space-y-2">
                             <Label htmlFor="brandId">Brand</Label>
                             <Select name="brandId" required defaultValue={item?.brandId || ""}>
-                                <SelectTrigger className="bg-background/50 border-white/10">
+                                <SelectTrigger className="w-full bg-background/50 border-white/10">
                                     <SelectValue placeholder="Select brand" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-background/95 backdrop-blur-xl border-white/20">
@@ -141,7 +161,7 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
                         <div className="space-y-2">
                             <Label htmlFor="categoryId">Category</Label>
                             <Select name="categoryId" required defaultValue={item?.categoryId || ""}>
-                                <SelectTrigger className="bg-background/50 border-white/10">
+                                <SelectTrigger className="w-full bg-background/50 border-white/10">
                                     <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-background/95 backdrop-blur-xl border-white/20">
@@ -155,7 +175,7 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
                         <div className="space-y-2">
                             <Label htmlFor="status">Status</Label>
                             <Select name="status" required defaultValue={item?.status || "working"}>
-                                <SelectTrigger className="bg-background/50 border-white/10">
+                                <SelectTrigger className="w-full bg-background/50 border-white/10">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-background/95 backdrop-blur-xl border-white/20">
@@ -256,15 +276,33 @@ export function ItemForm({ item, categories, brands }: { item?: any, categories?
                         {imageUrls.length > 0 && (
                             <div className="grid grid-cols-4 gap-2 mt-4">
                                 {imageUrls.map((url, i) => (
-                                    <div key={i} className="relative aspect-square rounded-md overflow-hidden bg-black/20 group border border-white/10">
+                                    <div key={i} className={`relative aspect-square rounded-md overflow-hidden bg-black/20 group border ${mainImageIndex === i ? 'border-primary ring-2 ring-primary/50' : 'border-white/10'}`}>
                                         <img src={url} alt={`Preview ${i}`} className="w-full h-full object-cover" />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeImage(i)}
-                                            className="absolute top-1 right-1 bg-black/60 hover:bg-red-500/80 p-1 rounded-full text-white transition-colors opacity-0 group-hover:opacity-100"
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                            {mainImageIndex !== i && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMainImageIndex(i); }}
+                                                    className="bg-primary/80 hover:bg-primary p-2 rounded-full text-white transition-colors"
+                                                    title="Set as Main Image"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeImage(i); }}
+                                                className="bg-red-500/80 hover:bg-red-600 p-2 rounded-full text-white transition-colors"
+                                                title="Remove Image"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        {mainImageIndex === i && (
+                                            <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                Main
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

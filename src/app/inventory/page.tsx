@@ -25,6 +25,7 @@ export default async function InventoryPage() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-primary/20 text-primary-foreground">
                             <tr>
+                                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs w-16">Edit</th>
                                 <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs">Name</th>
                                 <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs">Brand</th>
                                 <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs">Category</th>
@@ -33,7 +34,6 @@ export default async function InventoryPage() {
                                 <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs">Sold</th>
                                 <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs text-right">Rent/Day</th>
                                 <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs text-right">Paid Price</th>
-                                <th className="px-5 py-4 font-semibold uppercase tracking-wider text-xs text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -46,6 +46,9 @@ export default async function InventoryPage() {
                             ) : (
                                 items.map(item => (
                                     <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-5 py-4 text-left">
+                                            <ItemForm item={item} categories={categories} brands={brands} />
+                                        </td>
                                         <td className="px-5 py-4 font-medium text-foreground">{item.name}</td>
                                         <td className="px-5 py-4 text-muted-foreground">{item.brand?.name || 'No Brand'}</td>
                                         <td className="px-5 py-4 text-muted-foreground capitalize">{item.category?.name || 'Uncategorized'}</td>
@@ -63,11 +66,6 @@ export default async function InventoryPage() {
                                         <td className="px-5 py-4 text-muted-foreground">{item.soldDate ? new Date(item.soldDate).toLocaleDateString() : '-'}</td>
                                         <td className="px-5 py-4 text-right text-muted-foreground">₹{item.rentAmount.toFixed(2)}</td>
                                         <td className="px-5 py-4 text-right text-muted-foreground">₹{item.paidPrice.toFixed(2)}</td>
-                                        <td className="px-5 py-4 text-right">
-                                            <div className="flex justify-end pr-2">
-                                                <ItemForm item={item} categories={categories} brands={brands} />
-                                            </div>
-                                        </td>
                                     </tr>
                                 ))
                             )}

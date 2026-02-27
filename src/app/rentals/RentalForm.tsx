@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Plus } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Plus, UploadCloud, X, Loader2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -23,17 +23,59 @@ import {
 import { createRental, updateRental } from '@/app/actions/rental'
 import { toast } from 'sonner'
 import { differenceInHours, parseISO } from 'date-fns'
-import { Edit2 } from 'lucide-react'
 
-export function RentalForm({ items, activeRentals, rental }: { items: any[], activeRentals: any[], rental?: any }) {
+
+export function RentalForm({ items, activeRentals, rental, clients = [] }: { items: any[], activeRentals: any[], rental?: any, clients: any[] }) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
 
     // Form State
     const [selectedItems, setSelectedItems] = useState<any[]>(rental?.items || [])
+    const [selectedClientId, setSelectedClientId] = useState<string>(rental?.clientId || '')
     const [startDate, setStartDate] = useState(rental?.startDate ? new Date(rental.startDate).toISOString().slice(0, 16) : '')
     const [endDate, setEndDate] = useState(rental?.endDate ? new Date(rental.endDate).toISOString().slice(0, 16) : '')
-    const [discount, setDiscount] = useState(rental?.discount || 0)
+    const [discountPercentage, setDiscountPercentage] = useState(rental ? (rental.discount / ((rental.rentAmount * rental.days) || 1)) * 100 : 0)
+    const [imageUrls, setImageUrls] = useState<string[]>(rental?.images ? rental.images.split(',') : [])
+    const [uploading, setUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const handleFileUpload = async (files: FileList | null) => {
+        if (!files || files.length === 0) return
+
+        if (imageUrls.length + files.length > 6) {
+            toast.error('You can only upload a maximum of 6 photos.')
+            return
+        }
+
+        setUploading(true)
+        try {
+            const formData = new FormData()
+            Array.from(files).forEach(file => formData.append('file', file))
+
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+
+            if (!res.ok) throw new Error('Upload failed')
+
+            const data = await res.json()
+            setImageUrls(prev => [...prev, ...data.urls])
+            toast.success('Images uploaded successfully')
+        } catch (error) {
+            toast.error('Failed to upload images')
+        } finally {
+            setUploading(false)
+        }
+    }
+
+    const removeImage = (indexToRemove: number) => {
+        setImageUrls(prev => prev.filter((_, i) => i !== indexToRemove))
+    }
+
+    const selectedClientInfo = useMemo(() => {
+        return clients.find(c => c.id === selectedClientId)
+    }, [selectedClientId, clients])
 
     const availableItems = useMemo(() => {
         if (!items) return []
@@ -99,14 +141,22 @@ export function RentalForm({ items, activeRentals, rental }: { items: any[], act
         return Math.max(1, Math.ceil(hours / 24))
     }, [startDate, endDate])
 
+    const discountAmount = useMemo(() => {
+        return (calculatedDays * rentAmountPerDay) * (discountPercentage / 100)
+    }, [calculatedDays, rentAmountPerDay, discountPercentage])
+
     const calculatedTotal = useMemo(() => {
-        return Math.max(0, (calculatedDays * rentAmountPerDay) - discount)
-    }, [calculatedDays, rentAmountPerDay, discount])
+        return Math.max(0, (calculatedDays * rentAmountPerDay) - discountAmount)
+    }, [calculatedDays, rentAmountPerDay, discountAmount])
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         if (selectedItems.length === 0) {
             toast.error('Please select at least one item to rent.')
+            return
+        }
+        if (!selectedClientId) {
+            toast.error('Please select a client.')
             return
         }
 
@@ -115,12 +165,8 @@ export function RentalForm({ items, activeRentals, rental }: { items: any[], act
 
         const data = {
             itemIds: selectedItems.map(i => i.id),
-            tenantName: formData.get('tenantName') as string,
-            tenantMobile: formData.get('tenantMobile') as string,
-            idProof: formData.get('idProof') as string || undefined,
-            vehicleNo: formData.get('vehicleNo') as string || undefined,
-            address: formData.get('address') as string || undefined,
-            images: formData.get('images') as string || undefined,
+            clientId: selectedClientId,
+            images: imageUrls.length > 0 ? imageUrls.join(',') : undefined,
             description: formData.get('description') as string || undefined,
             paymentType: formData.get('paymentType') as string || undefined,
             startDate,
@@ -128,7 +174,7 @@ export function RentalForm({ items, activeRentals, rental }: { items: any[], act
             rentAmount: rentAmountPerDay,
             days: calculatedDays,
             totalPayment: calculatedTotal,
-            discount,
+            discount: discountAmount,
             amountPaid: parseFloat(formData.get('amountPaid') as string) || 0,
         }
 
@@ -170,53 +216,98 @@ export function RentalForm({ items, activeRentals, rental }: { items: any[], act
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-4">
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="tenantName">Tenant Name</Label>
-                                <Input id="tenantName" name="tenantName" required className="bg-background/50 border-white/10" placeholder="John Doe" defaultValue={rental?.tenantName || ''} />
+                        <div className="space-y-4">
+                            <div className="space-y-4">
+                                <Label htmlFor="clientId">Select Client</Label>
+                                <Select value={selectedClientId} onValueChange={setSelectedClientId} required>
+                                    <SelectTrigger className="w-full bg-background/50 border-white/10">
+                                        <SelectValue placeholder="Choose an existing client" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-background/95 backdrop-blur-xl border-white/20 max-h-[200px]">
+                                        {clients.map(client => (
+                                            <SelectItem key={client.id} value={client.id}>
+                                                {client.name} - {client.mobile}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="tenantMobile">Mobile Number</Label>
-                                <Input
-                                    id="tenantMobile"
-                                    name="tenantMobile"
-                                    type="tel"
-                                    required
-                                    minLength={10}
-                                    maxLength={10}
-                                    pattern="[0-9]{10}"
-                                    title="Mobile number must be exactly 10 digits"
-                                    className="bg-background/50 border-white/10"
-                                    placeholder="9876543210"
-                                    defaultValue={rental?.tenantMobile || ''}
-                                    onInput={(e) => {
-                                        const target = e.target as HTMLInputElement;
-                                        target.value = target.value.replace(/[^0-9]/g, '');
-                                    }}
+                            {selectedClientInfo && (
+                                <div className="p-3 bg-white/5 border border-white/10 rounded-md text-sm text-muted-foreground flex flex-col gap-1">
+                                    <p><strong className="text-foreground">Name:</strong> {selectedClientInfo.name}</p>
+                                    <p><strong className="text-foreground">Mobile:</strong> {selectedClientInfo.mobile}</p>
+                                    {selectedClientInfo.address && <p><strong className="text-foreground">Address:</strong> {selectedClientInfo.address}</p>}
+                                </div>
+                            )}
+                        </div>
+
+
+                        <div className="space-y-4">
+                            <Label>Images (Optional)</Label>
+
+                            <div
+                                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${uploading ? 'bg-primary/5 border-primary/30' : 'bg-background/50 border-white/20 hover:bg-white/5 hover:border-primary/50'}`}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => {
+                                    e.preventDefault()
+                                    handleFileUpload(e.dataTransfer.files)
+                                }}
+                            >
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    className="hidden"
+                                    ref={fileInputRef}
+                                    onChange={(e) => handleFileUpload(e.target.files)}
                                 />
+
+                                <div className="flex flex-col items-center justify-center gap-3">
+                                    {uploading ? (
+                                        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                                    ) : (
+                                        <UploadCloud className="h-10 w-10 text-muted-foreground" />
+                                    )}
+
+                                    <div>
+                                        <p className="text-sm font-semibold mb-1">
+                                            Drag files to upload
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mb-4">
+                                            or click button below
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            className="bg-primary/20 hover:bg-primary/30 text-primary"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploading}
+                                        >
+                                            Select files to upload
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="idProof">ID Proof (Optional)</Label>
-                                <Input id="idProof" name="idProof" className="bg-background/50 border-white/10" placeholder="Aadhar/License" defaultValue={rental?.idProof || ''} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="vehicleNo">Vehicle No (Optional)</Label>
-                                <Input id="vehicleNo" name="vehicleNo" className="bg-background/50 border-white/10" placeholder="e.g. MH 01 AB 1234" defaultValue={rental?.vehicleNo || ''} />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="address">Address (Optional)</Label>
-                            <Textarea id="address" name="address" className="bg-background/50 border-white/10 resize-none min-h-[80px]" placeholder="Full residential address" defaultValue={rental?.address || ''} />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="images">Images (Optional)</Label>
-                            <Input id="images" name="images" className="bg-background/50 border-white/10" placeholder="Image URL(s)" defaultValue={rental?.images || ''} />
+                            {imageUrls.length > 0 && (
+                                <div className="grid grid-cols-4 gap-2 mt-4">
+                                    {imageUrls.map((url, i) => (
+                                        <div key={i} className="relative aspect-square rounded-md overflow-hidden bg-black/20 group border border-white/10">
+                                            <img src={url} alt={`Preview ${i}`} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeImage(i); }}
+                                                    className="bg-red-500/80 hover:bg-red-600 p-2 rounded-full text-white transition-colors"
+                                                    title="Remove Image"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -278,14 +369,16 @@ export function RentalForm({ items, activeRentals, rental }: { items: any[], act
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="discount">Discount (₹)</Label>
+                                <Label htmlFor="discountPercentage">Discount (%)</Label>
                                 <Input
-                                    id="discount"
+                                    id="discountPercentage"
                                     type="number"
                                     step="0.01"
+                                    min="0"
+                                    max="100"
                                     className="bg-background/50 border-white/10"
-                                    value={discount || ''}
-                                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                    value={discountPercentage || ''}
+                                    onChange={(e) => setDiscountPercentage(parseFloat(e.target.value) || 0)}
                                 />
                             </div>
                         </div>
@@ -306,7 +399,7 @@ export function RentalForm({ items, activeRentals, rental }: { items: any[], act
                             <div className="space-y-2">
                                 <Label htmlFor="paymentType">Payment Type</Label>
                                 <Select name="paymentType" defaultValue={rental?.paymentType || undefined}>
-                                    <SelectTrigger className="bg-background/50 border-white/10">
+                                    <SelectTrigger className="w-full bg-background/50 border-white/10">
                                         <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-background/95 backdrop-blur-xl border-white/20">

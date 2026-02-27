@@ -1,11 +1,11 @@
-import { getItems } from '@/app/actions/item'
+import { getPublicCatalogItems } from '@/app/actions/item'
 import { prisma } from '@/lib/prisma'
 import { PublicCatalogClient } from '@/components/PublicCatalogClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PublicCatalogPage() {
-    const items = await getItems()
+    const items = await getPublicCatalogItems()
 
     // Fetch rentals that haven't ended yet to use for availability filtering
     const activeRentals = await prisma.rental.findMany({

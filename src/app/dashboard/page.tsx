@@ -32,7 +32,11 @@ export default async function DashboardPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/10">
                 <span className="text-muted-foreground">Active Rentals</span>
-                <span className="font-bold text-xl">{data.rentals.length}</span>
+                <span className="font-bold text-xl">{data.rentals.filter((r: any) => r.status !== 'completed').length}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/10">
+                <span className="text-muted-foreground">Completed Rentals</span>
+                <span className="font-bold text-xl">{data.rentals.filter((r: any) => r.status === 'completed').length}</span>
               </div>
               <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/10">
                 <span className="text-muted-foreground">Future Orders</span>

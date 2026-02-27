@@ -10,12 +10,18 @@ type Item = {
     name: string
 }
 
-type Rental = {
+interface RentalEvent {
     id: string
-    items: Item[]
     startDate: Date
     endDate: Date
-    tenantName: string
+    clientId: string
+    client?: {
+        name: string
+    }
+    customerName?: string // Order
+    status: string
+    totalPayment: number
+    items: any[]
 }
 
 type Order = {
@@ -26,7 +32,7 @@ type Order = {
     customerName: string
 }
 
-export function DashboardClient({ rentals, orders }: { rentals: Rental[], orders: Order[] }) {
+export function DashboardClient({ rentals, orders }: { rentals: RentalEvent[], orders: Order[] }) {
     const [date, setDate] = useState<Date | undefined>(new Date())
 
     const selectedDateEvents = [...rentals, ...orders].filter(event => {
@@ -83,10 +89,10 @@ export function DashboardClient({ rentals, orders }: { rentals: Rental[], orders
                         selectedDateEvents.map((evt: any) => (
                             <div key={evt.id} className="p-4 rounded-lg border border-white/10 bg-white/5 flex flex-col gap-1 transition-colors hover:bg-white/10">
                                 <div className="flex justify-between items-start mb-1">
-                                    <span className="text-sm font-semibold capitalize text-primary glow-text">
-                                        {'tenantName' in evt ? 'Rental' : 'Order'}
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${'clientId' in evt ? 'bg-primary/20 text-primary' : 'bg-orange-500/20 text-orange-400'}`}>
+                                        {'clientId' in evt ? 'Rental' : 'Order'}
                                     </span>
-                                    {'tenantName' in evt && (
+                                    {'clientId' in evt && (
                                         <a
                                             href={`/rentals/${evt.id}/invoice`}
                                             target="_blank"
@@ -98,9 +104,9 @@ export function DashboardClient({ rentals, orders }: { rentals: Rental[], orders
                                         </a>
                                     )}
                                 </div>
-                                <span className="font-medium text-lg capitalize">
-                                    {'tenantName' in evt ? evt.tenantName : evt.customerName}
-                                </span>
+                                <strong className="text-foreground">
+                                    {'clientId' in evt ? evt.client?.name || 'Unknown Client' : evt.customerName}
+                                </strong>
                                 <span className="text-sm text-muted-foreground">
                                     Items: {evt.items.map((i: any) => i.name).join(', ')}
                                 </span>

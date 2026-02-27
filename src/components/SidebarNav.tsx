@@ -13,7 +13,8 @@ import {
     Moon,
     Sun,
     Tags,
-    Star
+    Star,
+    Users
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
@@ -26,6 +27,7 @@ const navItems = [
     { name: 'Inventory', href: '/inventory', icon: PackageSearch },
     { name: 'Categories', href: '/categories', icon: Tags },
     { name: 'Brands', href: '/brands', icon: Star },
+    { name: 'Clients', href: '/clients', icon: Users },
     { name: 'Active Rentals', href: '/rentals', icon: Repeat },
     { name: 'Future Orders', href: '/orders', icon: CalendarPlus },
 ]

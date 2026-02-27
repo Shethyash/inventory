@@ -1,46 +1,55 @@
-import { NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
+import sharp from "sharp";
 
 export async function POST(request: Request) {
-    try {
-        const formData = await request.formData()
-        const files = formData.getAll('file') as File[]
+  try {
+    const formData = await request.formData();
+    const files = formData.getAll("file") as File[];
 
-        if (!files || files.length === 0) {
-            return NextResponse.json(
-                { error: "File is required." },
-                { status: 400 }
-            );
-        }
-
-        const uploadDir = join(process.cwd(), 'public', 'uploads')
-        if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true })
-        }
-
-        const uploadedUrls: string[] = []
-
-        for (const file of files) {
-            const bytes = await file.arrayBuffer()
-            const buffer = Buffer.from(bytes)
-
-            // Generate unique filename to avoid collisions
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
-            const filename = uniqueSuffix + '-' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-            const filepath = join(uploadDir, filename)
-
-            await writeFile(filepath, buffer)
-            uploadedUrls.push(`/uploads/${filename}`)
-        }
-
-        return NextResponse.json({ urls: uploadedUrls })
-    } catch (e: any) {
-        console.error("Error uploading file:", e)
-        return NextResponse.json(
-            { error: "Failed to upload file." },
-            { status: 500 }
-        );
+    if (!files || files.length === 0) {
+      return NextResponse.json({ error: "File is required." }, { status: 400 });
     }
+
+    const uploadDir = join(process.cwd(), "public", "uploads");
+    if (!existsSync(uploadDir)) {
+      await mkdir(uploadDir, { recursive: true });
+    }
+
+    const uploadedUrls: string[] = [];
+
+    for (const file of files) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      // Generate unique filename to avoid collisions
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      // Save as webp for better compression
+      const filename = `${uniqueSuffix}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_").split(".")[0]}.webp`;
+      const filepath = join(uploadDir, filename);
+
+      // Compress image using sharp
+      await sharp(buffer)
+        .resize({
+          width: 1920,
+          height: 1920,
+          fit: "inside", // Maintain aspect ratio, do not upscale
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 80 }) // WebP format with 80% quality is usually < 500kb for 1080p-4k
+        .toFile(filepath);
+
+      uploadedUrls.push(`/uploads/${filename}`);
+    }
+
+    return NextResponse.json({ urls: uploadedUrls });
+  } catch (e: any) {
+    console.error("Error uploading file:", e);
+    return NextResponse.json(
+      { error: "Failed to upload file." },
+      { status: 500 },
+    );
+  }
 }

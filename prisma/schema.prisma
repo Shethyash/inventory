@@ -36,29 +36,40 @@ model Item {
   category   Category? @relation(fields: [categoryId], references: [id])
 }
 
+model Client {
+  id        String  @id @default(cuid())
+  name      String
+  mobile    String
+  address   String?
+  reference String?
+
+  rentals Rental[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Rental {
-  id        String   @id @default(cuid())
-  receiptNo String?  @unique // Automatically generated unique timestamp ID
+  id        String  @id @default(cuid())
+  receiptNo String? @unique // Automatically generated unique timestamp ID
 
   items Item[] // A rental can have multiple items
 
-  tenantName   String
-  tenantMobile String   @default("") // Tenant's mobile number
-  startDate    DateTime
-  endDate      DateTime
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  startDate DateTime
+  endDate   DateTime
 
   rentAmount Float // Total rent amount per day for all items
   days       Int
 
-  address     String?
-  idProof     String?
-  vehicleNo   String?
   images      String?
   description String?
   paymentType String? // 'online' or 'cash'
 
-  status      String  @default("active") // 'active' or 'completed'
-  notes       String? // Notes for completion, e.g., missing items
+  status String  @default("active") // 'active' or 'completed'
+  notes  String? // Notes for completion, e.g., missing items
 
   totalPayment Float
   discount     Float @default(0)

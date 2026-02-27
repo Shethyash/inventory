@@ -21,6 +21,47 @@ async function main() {
     } else {
         console.log('Admin user already exists')
     }
+
+    // Seed Clients
+    const clientCount = await prisma.client.count()
+    if (clientCount === 0) {
+        await prisma.client.createMany({
+            data: [
+                { name: 'John Doe', mobile: '9876543210', address: '123 Main St' },
+                { name: 'Jane Smith', mobile: '9123456780', reference: 'Local Ad' },
+                { name: 'Acme Corp', mobile: '9998887776', address: 'Corporate Park Block B' },
+            ]
+        })
+        console.log('Seeded initial clients')
+    }
+
+    // Seed Categories
+    const categoryCount = await prisma.category.count()
+    if (categoryCount === 0) {
+        await prisma.category.createMany({
+            data: [
+                { name: 'Cameras' },
+                { name: 'Lenses' },
+                { name: 'Flash' },
+                { name: 'Dron' }
+            ]
+        })
+        console.log('Seeded initial categories')
+    }
+
+    // Seed Brands
+    const brandCount = await prisma.brand.count()
+    if (brandCount === 0) {
+        await prisma.brand.createMany({
+            data: [
+                { name: 'Sony' },
+                { name: 'Canon' },
+                { name: 'Nikon' },
+                { name: 'DJI' }
+            ]
+        })
+        console.log('Seeded initial brands')
+    }
 }
 
 main()

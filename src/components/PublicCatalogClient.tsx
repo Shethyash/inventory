@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { getItemImages } from '@/app/actions/item'
 
 export function PublicCatalogClient({ initialItems, activeRentals = [] }: { initialItems: any[], activeRentals?: any[] }) {
     const { theme, setTheme } = useTheme()
@@ -17,10 +18,30 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
     const [selectedItem, setSelectedItem] = useState<any | null>(null)
     const [startDate, setStartDate] = useState<string>('')
     const [endDate, setEndDate] = useState<string>('')
+    const [loadingImages, setLoadingImages] = useState(false)
 
     useEffect(() => {
         setMounted(true)
     }, [])
+
+    useEffect(() => {
+        async function fetchRemainingImages() {
+            if (selectedItem && selectedItem.images && selectedItem.images.length === 1) {
+                setLoadingImages(true)
+                try {
+                    const fullImages = await getItemImages(selectedItem.id)
+                    if (fullImages && fullImages.length > 0) {
+                        setSelectedItem((prev: any) => ({ ...prev, images: fullImages }))
+                    }
+                } catch (error) {
+                    console.error("Failed to load remaining images", error)
+                } finally {
+                    setLoadingImages(false)
+                }
+            }
+        }
+        fetchRemainingImages()
+    }, [selectedItem?.id])
 
     const categories = useMemo(() => Array.from(new Set(initialItems.map((i) => i.category?.name || 'Uncategorized'))), [initialItems])
     const brands = useMemo(() => Array.from(new Set(initialItems.map((i) => i.brand?.name || 'No Brand'))), [initialItems])
@@ -35,7 +56,8 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
                 (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
             const matchesCategory = categoryFilter === 'all' || catName === categoryFilter
             const matchesBrand = brandFilter === 'all' || brandName === brandFilter
-            return matchesSearch && matchesCategory && matchesBrand
+            const matchesStatus = item.status !== 'damage' && item.status !== 'sold out'
+            return matchesSearch && matchesCategory && matchesBrand && matchesStatus
         }).map(item => {
             let isAvailableForDates = true
             let conflictMsg = ''
@@ -262,7 +284,12 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
                     {selectedItem && (
                         <>
                             <div className="relative h-64 sm:h-80 bg-black/5 dark:bg-black/50 flex items-center justify-center p-8 border-b border-white/10">
-                                {selectedItem.images && selectedItem.images.length > 0 ? (
+                                {loadingImages ? (
+                                     <div className="flex flex-col items-center justify-center text-primary/60 animate-pulse">
+                                         <Camera size={48} className="mb-4 opacity-50" />
+                                         <span className="text-sm font-semibold tracking-wider uppercase">Loading High-Res Photos...</span>
+                                     </div>
+                                ) : selectedItem.images && selectedItem.images.length > 0 ? (
                                     <div className="flex gap-4 overflow-x-auto w-full h-full items-center snap-x">
                                         {selectedItem.images.map((img: any, idx: number) => (
                                             <img key={idx} src={img.url} alt={`${selectedItem.name} - ${idx}`} className="h-full object-contain snap-center shrink-0" />
@@ -281,11 +308,11 @@ export function PublicCatalogClient({ initialItems, activeRentals = [] }: { init
                             <div className="p-6 md:p-8 overflow-y-auto">
                                 <DialogHeader className="mb-6">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest">
-                                            {selectedItem.category?.name || 'Uncategorized'}
-                                        </span>
-                                        <span className="px-2 py-1 rounded-md bg-white/5 text-muted-foreground border border-white/10 text-xs font-bold uppercase tracking-widest">
+                                        <span className="px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-black uppercase tracking-widest">
                                             {selectedItem.brand?.name || 'No Brand'}
+                                        </span>
+                                        <span className="px-2 py-1 rounded-md bg-white/5 text-muted-foreground border border-white/10 text-[10px] font-bold uppercase tracking-widest">
+                                            {selectedItem.category?.name || 'Uncategorized'}
                                         </span>
                                     </div>
                                     <DialogTitle className="text-3xl font-extrabold tracking-tight">

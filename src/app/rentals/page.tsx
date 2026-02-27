@@ -1,4 +1,5 @@
 import { getRentals } from '@/app/actions/rental'
+import { getClients } from '@/app/actions/client'
 import { RentalForm } from './RentalForm'
 import { DeleteRentalButton } from './DeleteRentalButton'
 import { CompleteRentalButton } from './CompleteRentalButton'
@@ -12,9 +13,10 @@ export default async function RentalsPage({ searchParams }: { searchParams: Prom
     const resolvedParams = await searchParams;
     const currentTab = resolvedParams.tab || 'active'
 
-    const [rentals, items] = await Promise.all([
+    const [rentals, items, clients] = await Promise.all([
         getRentals(),
-        getItems()
+        getItems(),
+        getClients()
     ])
 
     const activeRentals = rentals.filter(r => r.status !== 'completed')
@@ -29,7 +31,7 @@ export default async function RentalsPage({ searchParams }: { searchParams: Prom
                     <p className="text-muted-foreground">Manage ongoing and completed gadget rentals.</p>
                 </div>
                 <div className="flex gap-4 items-center">
-                    {currentTab !== 'completed' && <RentalForm items={rentableItems} activeRentals={activeRentals} />}
+                    {currentTab !== 'completed' && <RentalForm items={rentableItems} activeRentals={activeRentals} clients={clients} />}
                     <div className="flex bg-white/5 border border-white/10 rounded-lg p-1">
                         <Link
                             href="/rentals?tab=active"
@@ -64,15 +66,18 @@ export default async function RentalsPage({ searchParams }: { searchParams: Prom
                                 <div className="space-y-4 z-10 flex-1">
                                     <div>
                                         <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-4 mb-2">
-                                            <h3 className="text-2xl font-bold text-foreground overflow-hidden text-ellipsis whitespace-nowrap">
-                                                {rental.tenantName} - {rental.tenantMobile || 'N/A'}
-                                            </h3>
+                                            <div className="flex items-center gap-3 w-full sm:w-auto overflow-hidden">
+                                                {currentTab !== 'completed' && (
+                                                    <div className="shrink-0 z-20">
+                                                        <RentalForm items={rentableItems} activeRentals={activeRentals} rental={rental} clients={clients} />
+                                                    </div>
+                                                )}
+                                                <h3 className="text-2xl font-bold text-foreground overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+                                                    {rental.client?.name || 'Unknown'} - {rental.client?.mobile || 'N/A'}
+                                                </h3>
+                                            </div>
 
                                             <div className="flex gap-2 z-20 shrink-0">
-                                                {currentTab !== 'completed' && (
-                                                    <RentalForm items={rentableItems} activeRentals={activeRentals} rental={rental} />
-                                                )}
-
                                                 <a
                                                     href={`/rentals/${rental.id}/invoice`}
                                                     target="_blank"

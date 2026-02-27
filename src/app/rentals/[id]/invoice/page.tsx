@@ -11,7 +11,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         include: {
             items: {
                 include: { brand: true }
-            }
+            },
+            client: true
         } // Include relations
     })
 
@@ -54,9 +55,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 <div className="mb-10 bg-gray-50 p-6 rounded-lg flex flex-col md:flex-row gap-8 justify-between">
                     <div>
                         <h3 className="font-bold text-gray-900 mb-2 uppercase text-sm tracking-widest border-b border-gray-200 pb-2">Billed To</h3>
-                        <p className="font-semibold text-lg text-gray-800">{rentalInfo.tenantName}</p>
-                        <p className="text-gray-600 mt-1">Mobile: {rentalInfo.tenantMobile || 'N/A'}</p>
-                        {rentalInfo.address && <p className="text-gray-600 mt-1 whitespace-pre-wrap">{rentalInfo.address}</p>}
+                        <p className="font-semibold text-lg text-gray-800">{rentalInfo.client?.name}</p>
+                        <p className="text-gray-600 mt-1">Mobile: {rentalInfo.client?.mobile || 'N/A'}</p>
+                        {rentalInfo.client?.address && <p className="text-gray-600 mt-1 whitespace-pre-wrap">{rentalInfo.client?.address}</p>}
                     </div>
                     <div>
                         <h3 className="font-bold text-gray-900 mb-2 uppercase text-sm tracking-widest border-b border-gray-200 pb-2">Rental Period ({rentalInfo.days} {rentalInfo.days === 1 ? 'day' : 'days'})</h3>
